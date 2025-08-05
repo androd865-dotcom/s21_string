@@ -6,7 +6,7 @@ OBJECTS = $(SOURCES:.c=.o)
 LIBRARY = s21_string.a
 
 TEST_DIR = tests
-TEST_SUITE_SOURCES = $(wildcard $(TEST_DIR)/*/*_suite.c)
+TEST_SUITE_SOURCES = $(wildcard $(TEST_DIR)/*_suite.c)
 TEST_SUITE_OBJECTS = $(patsubst %.c,%.o,$(TEST_SUITE_SOURCES))
 TEST_EXECUTABLES = $(patsubst %.c,%,$(TEST_SUITE_SOURCES))
 ALL_SRC = $(wildcard *.c */*.c */*/*.c *.h */*.h */*/*.h)
