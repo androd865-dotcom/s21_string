@@ -1,0 +1,49 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -Werror -std=c11
+
+SOURCES = s21_sprintf.c
+OBJECTS = $(SOURCES:.c=.o)
+LIBRARY = s21_string.a
+
+TEST_DIR = tests
+TEST_SUITE_SOURCES = $(wildcard $(TEST_DIR)/*/*_suite.c)
+TEST_SUITE_OBJECTS = $(patsubst %.c,%.o,$(TEST_SUITE_SOURCES))
+TEST_EXECUTABLES = $(patsubst %.c,%,$(TEST_SUITE_SOURCES))
+ALL_SRC = $(wildcard *.c */*.c */*/*.c *.h */*.h */*/*.h)
+
+all: $(LIBRARY)
+
+$(LIBRARY): $(OBJECTS)
+	ar rcs $@ $^
+	ranlib $@
+
+$(TEST_EXECUTABLES): LDLIBS = -lcheck -lm -lsubunit -lrt -lpthread
+$(TEST_EXECUTABLES): %: %.o $(LIBRARY)
+	$(CC) $(CFLAGS) -o $@ $< $(LIBRARY) $(LDLIBS)
+
+test: clean $(LIBRARY) $(TEST_EXECUTABLES)
+	for test in $(TEST_EXECUTABLES); do ./$$test; done
+
+gcov_report: CFLAGS += -coverage
+gcov_report: clean test
+	gcov $(SOURCES)
+	mkdir coverage_report
+	lcov --directory . --capture --output-file coverage.info
+	genhtml coverage.info --output-directory coverage_report
+
+clean:
+	rm -f $(LIBRARY) $(TEST_SUITE_OBJECTS) $(TEST_EXECUTABLES) *.o **/*.o tests/main
+	rm -f *.gcno *.gcda *.gcov **/**/*.gcno **/**/*.gcda **/**/*.gcov coverage.info -r coverage_report
+
+clang:
+	cp ./../materials/linters/.clang-format ./
+	clang-format -i $(ALL_SRC)
+
+control: CFLAGS += -DVALGRIND
+control: clean $(LIBRARY) $(TEST_EXECUTABLES)
+	for test in $(TEST_EXECUTABLES); do CK_FORK=no valgrind --tool=memcheck --leak-check=yes ./$$test; done
+
+cppcheck:
+	cppcheck --enable=all --suppress=missingIncludeSystem $(ALL_SRC)
+
+.PHONY: all clean test gcov_report clang control cppcheck
